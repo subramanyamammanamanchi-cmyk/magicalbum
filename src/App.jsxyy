@@ -1,0 +1,137 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import heic2any from "heic2any";
+
+function App() {
+  const [images, setImages] = useState([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [musicSrc, setMusicSrc] = useState(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [showAlbum, setShowAlbum] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const audioRef = useRef(null);
+
+  const backgrounds = [
+    'linear-gradient(135deg, #fff5f5 0%, #ffd1dc 100%)',
+    'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)',
+    'linear-gradient(135deg, #f1f8e9 0%, #dcedc8 100%)',
+  ];
+
+  // 🎭 20+ Different Magic Effects (Zoom In/Out included)
+  const magicEffects = [
+    { initial: { scale: 0, opacity: 0 }, animate: { scale: 1, opacity: 1 } },          // 1. Zoom In
+    { initial: { scale: 2, opacity: 0 }, animate: { scale: 1, opacity: 1 } },          // 2. Zoom Out
+    { initial: { x: -800, y: -800, rotate: -180, scale: 0 }, animate: { x: 0, y: 0, rotate: 0, scale: 1 } }, // 3. Corner Throw
+    { initial: { x: 800, y: -800, rotate: 180, scale: 0 }, animate: { x: 0, y: 0, rotate: 0, scale: 1 } },  // 4. Top-Right Throw
+    { initial: { y: -1000, scale: 0.5 }, animate: { y: 0, scale: 1 } },               // 5. Sky Fall
+    { initial: { y: 1000, scale: 0.5 }, animate: { y: 0, scale: 1 } },                // 6. Ground Bounce
+    { initial: { rotateY: 180, opacity: 0 }, animate: { rotateY: 0, opacity: 1 } },    // 7. Book Flip
+    { initial: { rotateX: 180, opacity: 0 }, animate: { rotateX: 0, opacity: 1 } },    // 8. Coin Flip
+    { initial: { scale: 0, rotate: 360 }, animate: { scale: 1, rotate: 0 } },          // 9. Super Spin
+    { initial: { x: -1000, skewX: 50 }, animate: { x: 0, skewX: 0 } },                // 10. Slide Left
+    { initial: { x: 1000, skewX: -50 }, animate: { x: 0, skewX: 0 } },               // 11. Slide Right
+    { initial: { opacity: 0, filter: "blur(20px)" }, animate: { opacity: 1, filter: "blur(0px)" } }, // 12. Fade Blur
+    { initial: { x: -1000, y: 1000, scale: 0 }, animate: { x: 0, y: 0, scale: 1 } },  // 13. Corner Pop
+    { initial: { scaleX: 0 }, animate: { scaleX: 1 } },                              // 14. Door Open
+    { initial: { scaleY: 0 }, animate: { scaleY: 1 } },                              // 15. Curtain Rise
+    { initial: { rotate: 720, scale: 0 }, animate: { rotate: 0, scale: 1 } },          // 16. Tornado
+    { initial: { x: 500, y: 500, rotate: 45, opacity: 0 }, animate: { x: 0, y: 0, rotate: 0, opacity: 1 } }, // 17. Diagonal
+    { initial: { scale: 4, opacity: 0 }, animate: { scale: 1, opacity: 1 } },          // 18. Giant Zoom
+    { initial: { z: -1000, opacity: 0 }, animate: { z: 0, opacity: 1 } },              // 19. 3D Depth
+    { initial: { scale: 0.2, y: -800 }, animate: { scale: 1, y: 0 } }                 // 20. Bouncy Drop
+  ];
+
+  const handleImages = async (e) => {
+    setLoading(true);
+    const files = Array.from(e.target.files);
+    const photoUrls = [];
+    for (let file of files) {
+      if (file.name.toLowerCase().endsWith(".heic")) {
+        try {
+          const blob = await heic2any({ blob: file, toType: "image/jpeg" });
+          photoUrls.push(URL.createObjectURL(blob));
+        } catch (err) { console.error(err); }
+      } else {
+        photoUrls.push(URL.createObjectURL(file));
+      }
+    }
+    setImages(photoUrls);
+    setLoading(false);
+  };
+
+  const togglePlay = () => {
+    if (audioRef.current.paused) {
+      audioRef.current.play();
+      setIsPlaying(true);
+    } else {
+      audioRef.current.pause();
+      setIsPlaying(false);
+    }
+  };
+
+  useEffect(() => {
+    let interval;
+    if (showAlbum && images.length > 0 && isPlaying) {
+      interval = setInterval(() => {
+        setCurrentIndex((prev) => (prev + 1) % images.length);
+      }, 5000); // 5 seconds per photo
+    }
+    return () => clearInterval(interval);
+  }, [showAlbum, images, isPlaying]);
+
+  return (
+    <div style={{ ...styles.container, background: backgrounds[currentIndex % backgrounds.length] }}>
+      <div style={styles.textureOverlay}></div>
+
+      {!showAlbum ? (
+        <div style={styles.uploadBox}>
+          <h2 style={styles.title}>Harini's Magic Studio 🌸</h2>
+          <label style={styles.customBtn}>📸 Select Photos <input type="file" multiple onChange={handleImages} style={{ display: 'none' }} /></label>
+          <br /><br />
+          <label style={styles.customBtn}>🎵 Select Music <input type="file" accept="audio/*" onChange={(e) => setMusicSrc(URL.createObjectURL(e.target.files[0]))} style={{ display: 'none' }} /></label>
+          <br /><br />
+          {images.length > 0 && <button onClick={() => { setShowAlbum(true); setIsPlaying(true); }} style={styles.viewBtn}>▶️ View Album</button>}
+          {loading && <p>Processing... ⏳</p>}
+        </div>
+      ) : (
+        <div style={styles.viewer}>
+          <button onClick={() => setShowAlbum(false)} style={styles.backBtn}>🔙 Back</button>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={currentIndex}
+              initial={magicEffects[currentIndex % magicEffects.length].initial}
+              animate={magicEffects[currentIndex % magicEffects.length].animate}
+              exit={{ opacity: 0, scale: 0.5 }}
+              transition={{ type: "spring", stiffness: 70, damping: 15, duration: 2 }}
+              style={styles.imageWrapper}
+            >
+              <img src={images[currentIndex]} style={styles.mainImage} alt="memories" />
+            </motion.div>
+          </AnimatePresence>
+          <div style={styles.controls}>
+            <button onClick={togglePlay} style={styles.roundBtn}>{isPlaying ? '⏸️' : '▶️'}</button>
+          </div>
+        </div>
+      )}
+      {musicSrc && <audio ref={audioRef} src={musicSrc} autoPlay loop onPlay={() => setIsPlaying(true)} onPause={() => setIsPlaying(false)} />}
+    </div>
+  );
+}
+
+const styles = {
+  container: { width: '100vw', height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden', position: 'relative', transition: 'background 2s ease' },
+  textureOverlay: { position: 'absolute', width: '100%', height: '100%', backgroundImage: `url("https://www.transparenttextures.com/patterns/cubes.png")`, opacity: 0.2, zIndex: -1 },
+  uploadBox: { padding: '40px', background: 'white', borderRadius: '30px', textAlign: 'center', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' },
+  title: { color: '#ff69b4', marginBottom: '30px' },
+  customBtn: { background: 'linear-gradient(45deg, #ff9a9e, #fad0c4)', color: 'white', padding: '12px 30px', borderRadius: '50px', cursor: 'pointer', fontWeight: 'bold' },
+  viewBtn: { padding: '15px 45px', borderRadius: '50px', border: 'none', background: '#ff69b4', color: 'white', fontWeight: 'bold', cursor: 'pointer', fontSize: '18px' },
+  viewer: { width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative' },
+  backBtn: { position: 'absolute', top: '25px', left: '20px', padding: '8px 18px', borderRadius: '20px', border: 'none', background: 'rgba(255,255,255,0.8)', cursor: 'pointer', zIndex: 10, fontWeight: 'bold' },
+  imageWrapper: { width: '92%', height: '82%', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 25px 50px rgba(0,0,0,0.3)', background: 'white' },
+  mainImage: { width: '100%', height: '100%', objectFit: 'cover' },
+  controls: { position: 'absolute', bottom: '40px', zIndex: 10 },
+  roundBtn: { width: '70px', height: '70px', borderRadius: '50%', border: 'none', background: 'white', fontSize: '28px', cursor: 'pointer', boxShadow: '0 10px 25px rgba(0,0,0,0.2)', display: 'flex', justifyContent: 'center', alignItems: 'center' }
+};
+
+export default App;
